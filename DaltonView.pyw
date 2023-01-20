@@ -361,7 +361,7 @@ ax.xaxis.set_minor_locator(AutoMinorLocator())
 ax.yaxis.set_minor_locator(AutoMinorLocator())
 plt.yticks(fontsize=14)
 plt.xticks(fontsize=14)
-figure.set(figheight=3.8,figwidth=7,dpi=100)
+figure.set(figheight=3.8,figwidth=7,dpi=300)
 canvas = FigureCanvasTkAgg(figure, root)
 canvas.get_tk_widget().pack(pady=20)
 
