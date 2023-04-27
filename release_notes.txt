@@ -1,0 +1,4 @@
+Version 1.2 Released 27 April 2023
+- fixed error in width for Gaussian distribution
+
+Version 1.1 Initial Release

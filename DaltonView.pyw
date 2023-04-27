@@ -14,11 +14,13 @@ from matplotlib.backends.backend_tkagg import (
 import numpy as np
 import re
 
-
+# DaltonView
+# Version 1.2
+# Release date: 27 April 2023
 
 #@# Create app and set theme #@#
 root = tk.Tk()
-root.title('DaltonView')
+root.title('DaltonView 1.2')
 
 style = ttk.Style(root)
 style.theme_use('xpnative')
@@ -64,6 +66,7 @@ def SpecShape(nm,OS,width,space):
     f = []
     for x in space:
         if c1var.get() == 1:
+            width = width/(2*np.log(2))**0.5
             f.append(OS*np.exp(-0.5*((x-nm)**2)/(width**2))/(width*np.sqrt(2*np.pi))) #GAUSSIAN
         elif c1var.get() == 0:
             f.append(OS*(width)/(((x-nm)**2)+(width)**2)/np.pi)  #LORENTZIAN
