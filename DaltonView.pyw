@@ -18,44 +18,6 @@ import re
 # Version 1.2
 # Release date: 27 April 2023
 
-#@# Create app and set theme #@#
-root = tk.Tk()
-root.title('DaltonView 1.2')
-
-style = ttk.Style(root)
-style.theme_use('xpnative')
-root.configure(bg='#f0f0f0')
-root.resizable(width=False,height=False)
-
-#@# Defining vars for GUI features #@#
-#
-root.opens = 0
-root.updates = 0
-root.spec_change = 0
-pathname = tk.StringVar()
-data = []
-path = []
-old_hwhm = [20]
-
-
-c1var = tk.IntVar()
-c1var.set(1)
-c2var = tk.IntVar()
-c3var = tk.IntVar()
-c3var.set(1)
-c4var = tk.IntVar()
-c4var.set(0)
-xmax = tk.IntVar()
-xmax.set(700)
-xmin = tk.IntVar()
-xmin.set(100)
-hwhm = tk.IntVar()
-hwhm.set(20)
-ymax = tk.StringVar()
-ymax.set('auto')
-#
-#@# End definitions #@#
-
 #@# Begin spectral functions #@#
 # Functions used for converting txt spec
 # data to numerical spectral data
@@ -63,14 +25,15 @@ def remove(string):
     return string.replace(" ", "")
 
 def SpecShape(nm,OS,width,space):
-    f = []
-    for x in space:
-        if c1var.get() == 1:
-            width = width/(2*np.log(2))**0.5
-            f.append(OS*np.exp(-0.5*((x-nm)**2)/(width**2))/(width*np.sqrt(2*np.pi))) #GAUSSIAN
-        elif c1var.get() == 0:
-            f.append(OS*(width)/(((x-nm)**2)+(width)**2)/np.pi)  #LORENTZIAN
-    return f
+    spectrum = []
+    if c1var.get() == 1:
+        width = width/(2*np.log(2))**0.5
+        for x in space:
+            spectrum.append(OS*np.exp(-0.5*((x-nm)**2)/(width**2))/(width*np.sqrt(2*np.pi))) #GAUSSIAN
+    elif c1var.get() == 0:
+        for x in space:
+            spectrum.append(OS*(width)/(((x-nm)**2)+(width)**2)/np.pi)  #LORENTZIAN
+    return spectrum
 
 def spec_gen(outfile):
     #...
@@ -141,24 +104,39 @@ def spec_gen(outfile):
 
 #@# Begin functions #@#
 
-def select_file():
+def select_quantum_file():
     filetypes = (
         ('Output files', ['*.out','*.log']),
         ('All files', '*.*')
     )
 
     f = fd.askopenfile(
-        title='Open a file',
+        title='Computational Output File',
         initialdir='/',
         filetypes=filetypes)
     
     try:
-        data=f.readlines()
-        pathname.set(f.name)
+        f.readlines()
+        comp_chem_file_name.set(f.name)
     except AttributeError:
         'NULL'
     
     return
+
+def select_experimental_file():
+    filetypes = [('Comma Separated Variables','*.csv')]
+    f2 = fd.askopenfile(
+        title='Spectrum CSV File [wavelength,abs]',
+        initialdir='/',
+        filetypes=filetypes)
+    try:
+        f2.readlines()
+        experiment_file_name.set(f2.name)
+    except AttributeError:
+        'NULL'
+    
+    return
+
 
 def opened():
     root.opens += 1
@@ -172,12 +150,17 @@ def plottr(spectrum,sticks):
     line = plt.plot(spectrum[0],spectrum[1]*70,linewidth=2)
     if c3var.get() == 1: plt.bar(sticks[0],sticks[1],width=2,color=ax.lines[-1]._color)
     ax.set_xlabel('wavelength / nm')
-    ax.set_ylabel('absorbance (arb. units)')
+    ax.set_ylabel('arbitrary a.u.')
     ax.set_xlim(xmin=xmin.get(),xmax=xmax.get())
     ax.xaxis.set_minor_locator(AutoMinorLocator())
     ax.yaxis.set_minor_locator(AutoMinorLocator())
     plt.yticks(fontsize=14)
     plt.xticks(fontsize=14)
+    return
+
+def exp_plotter(path_to_experimental_csv):
+    experimental_data = np.loadtxt(path_to_experimental_csv,delimiter=',',skiprows=1)
+    line = plt.plot(experimental_data[:,0],experimental_data[:,1]*float(scale_exp.get()),linewidth=2,color='k')
     return
 
 def c1_changed():
@@ -193,8 +176,8 @@ def c2_changed():
     return
 
 def open_file():
-    try:
-        opened()
+    opened()
+    try: 
         data = []
         txtpath = path.get().replace('"','')
         with open(txtpath) as f:
@@ -207,7 +190,13 @@ def open_file():
         plottr(spectrum, sticks)
         canvas.draw()
     except FileNotFoundError:
-        pass
+        print('File not found error... loading the computational output file')
+
+
+    if exp_path.get():
+        exp_plotter(exp_path.get().replace('"',''))
+
+
     return
 
 def slider_changed(event):
@@ -222,14 +211,14 @@ def update_plot():
     root.updates += 1
     old_hwhm.append(int(hwhm.get()))
     ax.set_xlim(xmin=xmin.get(),xmax=xmax.get())
-    try:
-        ax.set_ylim(ymin=0,ymax=float(ymax.get()))
-    except ValueError:
-        pass
     if ((hwhm.get()-old_hwhm[root.updates-1]) != 0) or (root.spec_change==True):
         if c4var.get() != 1: ax.clear()
         open_file()
     spec_change = False
+    if exp_path.get():
+        exp_plotter(exp_path.get().replace('"',''))
+    if ymax.get() != 'auto':
+        ax.set_ylim(ymin=0,ymax=float(ymax.get()))
     return canvas.draw()
 
 def confirm_export():
@@ -239,7 +228,7 @@ def confirm_export():
 def export(win):
     #print('Exporting....')
     data = []
-    txtpath = pathname.get().replace('"','')
+    txtpath = comp_chem_file_name.get().replace('"','')
     with open(txtpath) as f:
         data = f.readlines()
         f.close()
@@ -250,6 +239,50 @@ def export(win):
     return
 
 
+#@# Create app and set theme #@#
+root = tk.Tk()
+root.title('DaltonView 1.3')
+
+style = ttk.Style(root)
+#style.theme_use('xpnative')
+root.configure(bg='#f0f0f0')
+root.resizable(width=False,height=False)
+
+#@# Defining vars for GUI features #@#
+#
+root.opens = 0
+root.updates = 0
+root.spec_change = 0
+comp_chem_file_name = tk.StringVar()
+experiment_file_name = tk.StringVar()
+data = []
+experimental_data = []
+path = []
+experimental_path =[]
+
+old_hwhm = [20]
+
+
+c1var = tk.IntVar()
+c1var.set(1)
+c2var = tk.IntVar()
+c3var = tk.IntVar()
+c3var.set(1)
+c4var = tk.IntVar()
+c4var.set(0)
+xmax = tk.IntVar()
+xmax.set(700)
+xmin = tk.IntVar()
+xmin.set(100)
+hwhm = tk.IntVar()
+hwhm.set(20)
+ymax = tk.StringVar()
+ymax.set('auto')
+scale_exp = tk.StringVar()
+scale_exp.set('1')
+#
+#@# End definitions #@#
+
 #@# Begin setting window size #@#
 #
 
@@ -258,9 +291,9 @@ screen_width = root.winfo_screenwidth()
 screen_height = root.winfo_screenheight()
 # find the center point
 center_x = int(screen_width/2 - 700 / 2)
-center_y = int(screen_height/2 - 650 / 2)
+center_y = int(screen_height/2 - 700 / 2)
 # set window dimensions
-root.geometry(f'{700}x{650}+{center_x}+{center_y}')
+root.geometry(f'{700}x{700}+{center_x}+{center_y}')
 
 #
 #@# End window size #@#
@@ -272,11 +305,15 @@ root.geometry(f'{700}x{650}+{center_x}+{center_y}')
 # Top frame for file input and processing
 topframe = ttk.Frame(root)
 topframe.grid(column=0,row=0)
-ttk.Label(topframe, text='Output file path:').grid(column=0,row=0)
-path = tk.Entry(topframe,textvariable=pathname,width=50)
+ttk.Label(topframe, text='Output file:').grid(column=0,row=0)
+path = tk.Entry(topframe,textvariable=comp_chem_file_name,width=50)
 path.grid(column=1,row=0)
-f = ttk.Button(topframe,text='Select Output File',command=select_file).grid(column=2,row=0)
-file_button = ttk.Button(topframe, text='Plot File',command=open_file).grid(column=3,row=0)
+ttk.Label(topframe, text='Experimental Reference file: ').grid(column=0,row=1)
+exp_path = tk.Entry(topframe,textvariable=experiment_file_name,width=50)
+exp_path.grid(column=1,row=1)
+f = ttk.Button(topframe,text='Select Output File',command=select_quantum_file,width=20).grid(column=2,row=0)
+f2 = ttk.Button(topframe,text='Select Experiment File',command=select_experimental_file,width=20).grid(column=2,row=1)
+file_button = ttk.Button(topframe, text='Make Plot',command=open_file).grid(column=3,row=0)
 topframe.pack(padx=10,pady=10)
 
 # middle frame for plot options
@@ -307,8 +344,12 @@ ttk.Label(midframe, text='xmax: ').grid(column=1,row=1)
 xmaxbox = tk.Entry(midframe,textvariable=xmax,width=8)
 xmaxbox.bind('<Return>',do_nothing())
 xmaxbox.grid(column=2,row=1)
-ttk.Label(midframe, text='ymax: ').grid(column=1,row=3)
+ttk.Label(midframe, text='ymax: ').grid(column=1,row=2)
 ymaxbox = tk.Entry(midframe,textvariable=ymax,width=8)
+ymaxbox.bind('<Return>',do_nothing())
+ymaxbox.grid(column=2,row=2)
+ttk.Label(midframe, text='scale_exp:').grid(column=1,row=3)
+ymaxbox = tk.Entry(midframe,textvariable=scale_exp,width=8)
 ymaxbox.bind('<Return>',do_nothing())
 ymaxbox.grid(column=2,row=3)
 
@@ -357,7 +398,7 @@ figure,ax = plt.subplots()
 global line
 figure.subplots_adjust(top=0.92,right=0.95,bottom=0.16,left=0.15)
 ax.set_xlabel('wavelength / nm',size=14)
-ax.set_ylabel('absorbance (arb. units)',size=14)
+ax.set_ylabel('arbitrary a.u.',size=14)
 ax.xaxis.set_minor_locator(AutoMinorLocator())
 ax.yaxis.set_minor_locator(AutoMinorLocator())
 plt.yticks(fontsize=14)
@@ -390,7 +431,7 @@ def popupBonus():
     return win
 
 def save_fig():
-    txtpath = pathname.get().replace('"','')
+    txtpath = comp_chem_file_name.get().replace('"','')
     plt.savefig(txtpath.replace('.out','.png'),dpi=500)
     return
 
