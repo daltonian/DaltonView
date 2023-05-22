@@ -1,3 +1,10 @@
+Version 1.3 Released 22 May 2023
+- added ability to plot experimental absorption spectrum
+- fixed bugs
+   * ymax option not always working
+   * hold plot box not always working
+   * cleaning of functions
+
 Version 1.2 Released 27 April 2023
 - fixed error in width for Gaussian distribution
 
