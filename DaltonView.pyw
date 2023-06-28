@@ -24,15 +24,15 @@ import re
 def remove(string):
     return string.replace(" ", "")
 
-def SpecShape(nm,OS,width,space):
+def SpecShape(eV,OS,width,space):
     spectrum = []
     if c1var.get() == 1:
-        width = width/(2*np.log(2))**0.5
+        sigma = width/(2*np.log(2))**0.5
         for x in space:
-            spectrum.append(OS*np.exp(-0.5*((x-nm)**2)/(width**2))/(width*np.sqrt(2*np.pi))) #GAUSSIAN
+            spectrum.append(OS*np.exp(-0.5*((x-eV)**2)/(sigma**2))/(sigma*np.sqrt(2*np.pi))) #GAUSSIAN
     elif c1var.get() == 0:
         for x in space:
-            spectrum.append(OS*(width)/(((x-nm)**2)+(width)**2)/np.pi)  #LORENTZIAN
+            spectrum.append(OS*(width)/(((x-eV)**2)+(width)**2)/np.pi)  #LORENTZIAN
     return spectrum
 
 def spec_gen(outfile):
@@ -76,16 +76,16 @@ def spec_gen(outfile):
     # Define wavelength (or eV) region over which to create spectrum
     # # Position of wavelengths will effect the normalization of the
     # # spectrum, ie should ideally match experimental ref range
-    min_wl = 1 # Minimum wavelength in nm
-    max_wl = 700 # Maximum wavelength in nm
-    num_wl = (max_wl-min_wl)*2+1
-    space = np.linspace(min_wl,max_wl,num_wl)
+    min_eV = 150 # Minimum wavelength in meV
+    max_eV = 8300 # Maximum wavelength in meV
+    num_eV = (max_eV-min_eV)*2+1
+    space = np.linspace(min_eV,max_eV,num_eV)/1000
 
-    gamma = int(hwhm.get())
+    peak_width = hwhm.get()/1000
 
     spec_lines = []
     for i in range(len(nm)):
-        spec_lines.append(SpecShape(float(nm[i]),float(OS[i]),gamma,space))
+        spec_lines.append(SpecShape(float(eV[i]),float(OS[i]),peak_width,space))
     peaks = np.array(spec_lines).T.tolist()
 
     # Take each energy's Lorentzian and sum
@@ -94,11 +94,12 @@ def spec_gen(outfile):
     for element in peaks:
         if sum(element) > maxAbs:
             maxAbs = sum(element)
-    maxAbs = 1
+    maxAbs = 1 # Normalizing turned off
     # Needs two loops to find the total maximum first
+
     for element in peaks:
         spectrum.append(sum(element)/maxAbs)
-    return np.array([space,spectrum]), np.array([nm,OS])
+    return np.array([1239.8/space,spectrum]), np.array([nm,OS])
 
 #@# End spectral functions #@#
 
@@ -147,7 +148,7 @@ def do_nothing():
 
 def plottr(spectrum,sticks):
     #... 
-    line = plt.plot(spectrum[0],spectrum[1]*70,linewidth=2)
+    line = plt.plot(spectrum[0],spectrum[1],linewidth=2)
     if c3var.get() == 1: plt.bar(sticks[0],sticks[1],width=2,color=ax.lines[-1]._color)
     ax.set_xlabel('wavelength / nm')
     ax.set_ylabel('arbitrary a.u.')
@@ -200,18 +201,18 @@ def open_file():
     return
 
 def slider_changed(event):
-    hwhm.set(round(slider.get()))
+    hwhm.set(round(slider.get(),3))
     value_label.configure(text=get_current_hwhm())
     return
 
 def get_current_hwhm():
-    return str(hwhm.get())+' nm'
+    return str(hwhm.get()/1000)+' eV'
     
 def update_plot():
     root.updates += 1
-    old_hwhm.append(int(hwhm.get()))
+    old_hwhm.append(float(hwhm.get()/1000))
     ax.set_xlim(xmin=xmin.get(),xmax=xmax.get())
-    if ((hwhm.get()-old_hwhm[root.updates-1]) != 0) or (root.spec_change==True):
+    if ((float(hwhm.get()/1000)-old_hwhm[root.updates-1]) != 0) or (root.spec_change==True):
         if c4var.get() != 1: ax.clear()
         open_file()
     spec_change = False
@@ -241,7 +242,7 @@ def export(win):
 
 #@# Create app and set theme #@#
 root = tk.Tk()
-root.title('DaltonView 1.3')
+root.title('DaltonView 1.4')
 
 style = ttk.Style(root)
 #style.theme_use('xpnative')
@@ -260,7 +261,7 @@ experimental_data = []
 path = []
 experimental_path =[]
 
-old_hwhm = [20]
+old_hwhm = [0.25]
 
 
 c1var = tk.IntVar()
@@ -275,7 +276,7 @@ xmax.set(700)
 xmin = tk.IntVar()
 xmin.set(100)
 hwhm = tk.IntVar()
-hwhm.set(20)
+hwhm.set(200)
 ymax = tk.StringVar()
 ymax.set('auto')
 scale_exp = tk.StringVar()
@@ -355,14 +356,14 @@ ymaxbox.grid(column=2,row=3)
 
 ttk.Label(midframe, text='     ').grid(column=3,row=0)
 ttk.Label(midframe, text='     ').grid(column=3,row=1)
-ttk.Label(midframe, text='1 nm').grid(column=4,row=1)
+ttk.Label(midframe, text='0.10 eV').grid(column=4,row=1)
 ttk.Label(midframe, text='Peak Width (HWHM)').grid(column=5,row=0)
 
 # Slider for adjusting peak width
 slider = ttk.Scale(
     midframe,
-    from_=1,
-    to=80,
+    from_=100,
+    to=400,
     orient='horizontal',
     command=slider_changed,
     variable=hwhm
@@ -375,7 +376,7 @@ value_label = ttk.Label(
 )
 value_label.grid(row=2,column=5)
 
-ttk.Label(midframe, text='80 nm    ').grid(column=6,row=1)
+ttk.Label(midframe, text='0.40 eV    ').grid(column=6,row=1)
 
 # Button for updating the figure
 update_button = ttk.Button(
