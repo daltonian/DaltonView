@@ -15,19 +15,21 @@ import numpy as np
 import re
 
 # DaltonView
-# Version 1.2
-# Release date: 27 April 2023
+# Version 1.4
+# Release date: 28 February 2024
 
 #@# Begin spectral functions #@#
 # Functions used for converting txt spec
 # data to numerical spectral data
 def remove(string):
+    """ Simple function that removes whitespace from string """
     return string.replace(" ", "")
 
 def SpecShape(eV,OS,width,space):
+    """ Takes eV, osc. strength, hwhm, and wavelenth range for plotting, and makes indididual peak shape """
     spectrum = []
     if c1var.get() == 1:
-        sigma = width/(2*np.log(2))**0.5
+        sigma = 1239.8/width/(2*np.log(2))**0.5
         for x in space:
             spectrum.append(OS*np.exp(-0.5*((x-eV)**2)/(sigma**2))/(sigma*np.sqrt(2*np.pi))) #GAUSSIAN
     elif c1var.get() == 0:
@@ -36,6 +38,7 @@ def SpecShape(eV,OS,width,space):
     return spectrum
 
 def spec_gen(outfile):
+    """ Retrieves excitation data from quantum chemical output file """
     #...
     # Find lines which contain eV, oscialltor strength, and FC factor
 
@@ -206,7 +209,7 @@ def slider_changed(event):
     return
 
 def get_current_hwhm():
-    return str(hwhm.get()/1000)+' eV'
+    return str(hwhm.get())+' nm'
     
 def update_plot():
     root.updates += 1
@@ -276,7 +279,7 @@ xmax.set(700)
 xmin = tk.IntVar()
 xmin.set(100)
 hwhm = tk.IntVar()
-hwhm.set(200)
+hwhm.set(25)
 ymax = tk.StringVar()
 ymax.set('auto')
 scale_exp = tk.StringVar()
@@ -356,14 +359,14 @@ ymaxbox.grid(column=2,row=3)
 
 ttk.Label(midframe, text='     ').grid(column=3,row=0)
 ttk.Label(midframe, text='     ').grid(column=3,row=1)
-ttk.Label(midframe, text='0.10 eV').grid(column=4,row=1)
+ttk.Label(midframe, text='5 nm ').grid(column=4,row=1)
 ttk.Label(midframe, text='Peak Width (HWHM)').grid(column=5,row=0)
 
 # Slider for adjusting peak width
 slider = ttk.Scale(
     midframe,
-    from_=100,
-    to=400,
+    from_=5,
+    to=75,
     orient='horizontal',
     command=slider_changed,
     variable=hwhm
@@ -376,7 +379,7 @@ value_label = ttk.Label(
 )
 value_label.grid(row=2,column=5)
 
-ttk.Label(midframe, text='0.40 eV    ').grid(column=6,row=1)
+ttk.Label(midframe, text='75 nm    ').grid(column=6,row=1)
 
 # Button for updating the figure
 update_button = ttk.Button(
@@ -399,7 +402,7 @@ figure,ax = plt.subplots()
 global line
 figure.subplots_adjust(top=0.92,right=0.95,bottom=0.16,left=0.15)
 ax.set_xlabel('wavelength / nm',size=14)
-ax.set_ylabel('arbitrary a.u.',size=14)
+ax.set_ylabel('normalized absorbance',size=14)
 ax.xaxis.set_minor_locator(AutoMinorLocator())
 ax.yaxis.set_minor_locator(AutoMinorLocator())
 plt.yticks(fontsize=14)
