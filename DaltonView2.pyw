@@ -173,6 +173,8 @@ class DaltonViewApp:
         self.checkvarLorentzian = tk.IntVar()
         self.checkvarPlotBars = tk.IntVar()
         self.checkvarPlotBars.set(1)
+        self.checkvarFullTDDFT = tk.IntVar()
+        self.checkvarFullTDDFT.set(0)
         self.checkvarHoldPlots = tk.IntVar()
         self.checkvarHoldPlots.set(0)
         self.xmax = tk.IntVar()
@@ -227,14 +229,17 @@ class DaltonViewApp:
         # Middle frame for plot options
         midframe = ttk.LabelFrame(self.root, text='Plot Options')
 
-        checkboxGaussian = ttk.Checkbutton(midframe, text='Gaussian   ', command=self.changed_checkboxGaussian, variable=self.checkvarGaussian)
+        checkboxGaussian = ttk.Checkbutton(midframe, text='Gaussian    ', command=self.changed_checkboxGaussian, variable=self.checkvarGaussian)
         checkboxGaussian.grid(column=0, row=0)
         
-        checkboxLorentzian = ttk.Checkbutton(midframe, text='Lorentzian', command=self.changed_checkboxLorentzian, variable=self.checkvarLorentzian)
+        checkboxLorentzian = ttk.Checkbutton(midframe, text='Lorentzian ', command=self.changed_checkboxLorentzian, variable=self.checkvarLorentzian)
         checkboxLorentzian.grid(column=0, row=1)
         
-        checkboxPlotBars = ttk.Checkbutton(midframe, text='Plot bars   ', variable=self.checkvarPlotBars)
+        checkboxPlotBars = ttk.Checkbutton(midframe, text='Plot bars    ', variable=self.checkvarPlotBars)
         checkboxPlotBars.grid(column=0, row=2)
+
+        # checkboxFullTDDFT = ttk.Checkbutton(midframe, text='Use full TD ', variable=self.checkvarFullTDDFT)
+        # checkboxFullTDDFT.grid(column=0, row=3)
 
         ttk.Label(midframe, text='xmin: ').grid(column=1,row=0)
         xminbox = tk.Entry(midframe,textvariable=self.xmin,width=8)
