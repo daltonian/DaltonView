@@ -1,7 +1,7 @@
 # DaltonView
 ## TD-DFT spectrum viewing software
 
-An executable version is available at https://daltonian.co/daltonview or a direct download link can be provided upon request.
+An executable version is available at https://daltonian.co/daltonview or this [direct download link](http://u.pc.cd/CjHotalK)
 
 Just a few tips on how the file system is configured:
 1. Output type is determined by the first line of the output file. Gaussian and Q-Chem print their respective names in the first line of an output file by default. If your implementation differs from this, you could just add 'Gaussian' or 'Q-Chem' to the first line of the output.
