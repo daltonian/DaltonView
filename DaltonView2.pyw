@@ -42,41 +42,71 @@ class DataManager:
         # Find lines which contain eV, oscialltor strength, and FC factor
 
         if 'Q-Chem' in lines[0]:
-            start,end = [x for x,y in zip(range(len(lines)),lines) if 'TDDFT Excitation Energies' in y or 'SETman timing' in y]
-            eV = []
-            OS = []
-            nm = []
-            for line in lines[start:end]:
-                if 'Excited state' in line:
-                    eV.append(float(re.findall('\d*\.?\d+',line)[1]))
-                    nm.append(1239.8/eV[-1])
-                elif 'Strength' in line:
-                    OS.append(float(re.findall('\d*\.?\d+',line)[0]))
+            try:
+                start,end = [x for x,y in zip(range(len(lines)),lines) if 'TDDFT Excitation Energies' in y or 'SETman timing' in y]
+                eV = []
+                OS = []
+                nm = []
+                for line in lines[start:end]:
+                    if 'Excited state' in line:
+                        eV.append(float(re.findall('\d*\.?\d+',line)[1]))
+                        nm.append(1239.8/eV[-1])
+                    elif 'Strength' in line:
+                        OS.append(float(re.findall('\d*\.?\d+',line)[0]))
+            except ValueError:
+                print("This does not appear to be a TD-DFT file.\nDouble check selection")
+                return
                            
         
         elif 'Gaussian' in lines[0]:
-            # Find lines which contain eV, oscialltor strength, and FC factor
-            start = [x for x in range(len(lines)) if 'Excitation energies and oscillator strengths:' in lines[x]][0]
-            end = [x for x in range(len(lines)) if ' Population analysis using the SCF density.' in lines[x]][0]
-            states = [x for x in range(start,end) if 'Excited State  ' in lines[x]]        # Find which lines have eV values
+            try:
+                # Find lines which contain eV, oscialltor strength, and FC factor
+                start = [x for x in range(len(lines)) if 'Excitation energies and oscillator strengths:' in lines[x]][0]
+                end = [x for x in range(len(lines)) if ' Population analysis using the SCF density.' in lines[x]][0]
+                state_index = [x for x in range(start,end) if 'Excited State  ' in lines[x]]        # Find which lines have eV values
 
-            eV = []
-            nm = []
-            OS = []
-            for state in states:
-                eV.append(float(re.findall('\d*\.?\d+',lines[state])[1]))
-                nm.append(float(re.findall('\d*\.?\d+',lines[state])[2]))
-                OS.append(float(re.findall('\d*\.?\d+',lines[state])[3]))
+                eV = []
+                nm = []
+                OS = []
+                for idx in state_index:
+                    eV.append(float(re.findall('\d*\.?\d+',lines[idx])[1]))
+                    nm.append(float(re.findall('\d*\.?\d+',lines[idx])[2]))
+                    OS.append(float(re.findall('\d*\.?\d+',lines[idx])[3]))
+            except ValueError:
+                print("This does not appear to be a TD-DFT file.\nDouble check selection")
+                return
+
+        elif 'GAMESS' in lines[0]:
+            try:
+                # Find lines which contain eV, oscialltor strength, and FC factor
+                start = [x for x in range(len(lines)) if 'R-TDDFT CALCULATION CONVERGED' in lines[x]][0]
+                end = [x for x in range(len(lines)) if 'SUMMARY OF TDDFT RESULTS' in lines[x]][0]
+                state_index = [x for x in range(start,end) if 'STATE # ' in lines[x]]        # Find which lines have eV values
+
+                eV = []
+                nm = []
+                OS = []
+                for idx in state_index:
+                    eV.append(float(re.findall('\d*\.?\d+',lines[idx])[0]))
+                    nm.append(1239.8/eV[-1])
+                    OS.append(float(re.findall('\d*\.?\d+',lines[idx+1])[0]))
+            except ValueError:
+                print("This does not appear to be a TD-DFT file.\nDouble check selection")
+        
+        else:
+            print("Could not determine input file type...\nVerify that the name of the program of origin is in the first line.")
+            return
+
         return eV, nm, OS
 
     def makeSpectrumFromRetrievedData(self,eV,nm,OS,hwhm,peakShapeBool):
         # Define wavelength (or eV) region over which to create spectrum
         # # Position of wavelengths will effect the normalization of the
         # # spectrum, ie should ideally match experimental ref range
-        min_eV = 1500 # Minimum energy in meV (~830 nm)
-        max_eV = 12000 # Maximum wavelength in meV (~100 nm)
-        num_eV = (max_eV-min_eV)*2+1
-        space = np.linspace(min_eV,max_eV,num_eV)/1000
+        min_eV = 0.4 # Minimum energy in eV (~3100 nm)
+        max_eV = 15 # Maximum wavelength in eV (~80 nm)
+        num_eV = int(3000*2+1)
+        space = np.linspace(min_eV,max_eV,num_eV)
 
         peak_width = hwhm/1000
 
@@ -119,7 +149,7 @@ class PlotManager:
     @staticmethod
     def plotTheoryData(ax,spectrum,sticks,barsBool):
         #... 
-        ax.plot(spectrum[0],spectrum[1],linewidth=2)
+        ax.plot(spectrum[0],spectrum[1],linewidth=2,label="Theory Spectrum")
         if barsBool == 1:
             for x in range(len(sticks[0])):
                 print(sticks[0,x],sticks[1,x])
@@ -129,10 +159,10 @@ class PlotManager:
     @staticmethod
     def plotExperimentData(path_to_experimental_csv,scale_factor):
         experimental_data = np.loadtxt(path_to_experimental_csv,delimiter=',',skiprows=1)
-        ax.plot(experimental_data[:,0],experimental_data[:,1]*float(scale_factor),linewidth=2,color='k')
+        ax.plot(experimental_data[:,0],experimental_data[:,1]*float(scale_factor),linewidth=2,color='k',label='Experimental Spectrum')
         return
     
-class TextRedirector:
+class LogManager:
     def __init__(self, widget, tag="stdout"):
         self.widget = widget
         self.tag = tag
@@ -145,7 +175,6 @@ class TextRedirector:
     
     def flush(self):
         pass
-
 
 class DaltonViewApp:
     def __init__(self,root,figure,ax):
@@ -178,7 +207,7 @@ class DaltonViewApp:
         self.checkvarHoldPlots = tk.IntVar()
         self.checkvarHoldPlots.set(0)
         self.xmax = tk.IntVar()
-        self.xmax.set(700)
+        self.xmax.set(2000)
         self.xmin = tk.IntVar()
         self.xmin.set(100)
         self.hwhm = tk.IntVar()
@@ -323,7 +352,7 @@ class DaltonViewApp:
         console_frame.pack()
 
         # Redirect stdout to the console log
-        sys.stdout = TextRedirector(self.console_log, "stdout")
+        sys.stdout = LogManager(self.console_log, "stdout")
 
 
     def pressedSelectTheoryFile(self):
@@ -369,6 +398,7 @@ class DaltonViewApp:
 
         if self.ExperimentFilePath.get():
             self.plotExperimentData(self.ExperimentFilePath.get().replace('"',''),self.scale_exp.get())
+        return
 
     def pressedUpdatePlot(self):
         self.root.updates += 1
@@ -391,6 +421,7 @@ class DaltonViewApp:
         self.ax.set_ylabel('normalized absorbance',size=14)
         self.ax.xaxis.set_minor_locator(AutoMinorLocator())
         self.ax.yaxis.set_minor_locator(AutoMinorLocator())
+        self.ax.legend(edgecolor='none')
         self.ax.tick_params(axis='both',labelsize=14)
         self.figure.set(figheight=3.8,figwidth=7,dpi=100)
         
@@ -421,25 +452,23 @@ class DaltonViewApp:
         self.figure.subplots_adjust(top=0.92,right=0.95,bottom=0.16,left=0.15)
         self.ax.set_xlabel('wavelength / nm',size=14)
         self.ax.set_ylabel('normalized absorbance',size=14)
-        self.ax.set_xlim(100,700)
+        self.ax.set_xlim(100,2000)
         self.ax.xaxis.set_minor_locator(AutoMinorLocator())
         self.ax.yaxis.set_minor_locator(AutoMinorLocator())
         self.ax.tick_params(axis='both',labelsize=14)
         self.figure.set(figheight=3.8,figwidth=7,dpi=100)
+        return
 
     def pressedExportData(self):
         self.popupExportReminder()
         return
 
     def confirmedExportData(self, win):
-        #print('Exporting....')
-        data = []
         txtpath = self.comp_chem_file_name.get().replace('"','')
-        with open(txtpath) as f:
-            data = f.readlines()
-        spectrum,sticks = self.retrieveDataFromLines(data)
-        np.savetxt(txtpath.replace('.out','_spectrum.csv'),spectrum.T,delimiter=',',header="nm,abs")
-        np.savetxt(txtpath.replace('.out','_sticks.csv'),sticks.T,delimiter=',',header='nm,f')
+        basefilename = txtpath.split(".")
+        spectrum,sticks = self.spectrum,self.sticks
+        np.savetxt(basefilename[0]+'_spectrum.csv',spectrum.T,delimiter=',',header="nm,abs")
+        np.savetxt(basefilename[0]+'_sticks.csv',sticks.T,delimiter=',',header='nm,f')
         win.destroy()
         return
     
@@ -450,7 +479,7 @@ class DaltonViewApp:
         l0.grid(row=0,column=0,pady=5)
         l1 = ttk.Label(win,text='The exported data will reflect')
         l1.grid(row=1,column=0,padx=10,columnspan=2)
-        l2 = ttk.Label(win,text='the current export options!')
+        l2 = ttk.Label(win,text='the last \'updated\' data!')
         l2.grid(row=2,column=0,columnspan=2)
         b1 = ttk.Button(win,text='Okay',command=lambda win= win:self.confirmedExportData(win))
         b1.grid(row=3,column=0,pady=10)
