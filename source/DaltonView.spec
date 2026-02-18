@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['DaltonView.pyw'],
+    ['main.py'],
     pathex=[],
     binaries=[],
     datas=[],

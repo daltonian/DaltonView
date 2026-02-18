@@ -16,10 +16,10 @@ class DataManager:
                 nm = []
                 for line in lines[start:end]:
                     if 'Excited state' in line:
-                        eV.append(float(re.findall('\d*\.?\d+',line)[1]))
+                        eV.append(float(re.findall(r'\d*\.?\d+',line)[1]))
                         nm.append(1239.8/eV[-1])
                     elif 'Strength' in line:
-                        OS.append(float(re.findall('\d*\.?\d+',line)[0]))
+                        OS.append(float(re.findall(r'\d*\.?\d+',line)[0]))
             except ValueError:
                 print("This does not appear to be a TD-DFT file.\nDouble check selection")
                 return
@@ -36,9 +36,9 @@ class DataManager:
                 nm = []
                 OS = []
                 for idx in state_index:
-                    eV.append(float(re.findall('\d*\.?\d+',lines[idx])[1]))
-                    nm.append(float(re.findall('\d*\.?\d+',lines[idx])[2]))
-                    OS.append(float(re.findall('\d*\.?\d+',lines[idx])[3]))
+                    eV.append(float(re.findall(r'\d*\.?\d+',lines[idx])[1]))
+                    nm.append(float(re.findall(r'\d*\.?\d+',lines[idx])[2]))
+                    OS.append(float(re.findall(r'\d*\.?\d+',lines[idx])[3]))
             except ValueError:
                 print("This does not appear to be a TD-DFT file.\nDouble check selection")
                 return
@@ -54,9 +54,9 @@ class DataManager:
                 nm = []
                 OS = []
                 for idx in state_index:
-                    eV.append(float(re.findall('\d*\.?\d+',lines[idx])[0]))
+                    eV.append(float(re.findall(r'\d*\.?\d+',lines[idx])[0]))
                     nm.append(1239.8/eV[-1])
-                    OS.append(float(re.findall('\d*\.?\d+',lines[idx+1])[0]))
+                    OS.append(float(re.findall(r'\d*\.?\d+',lines[idx+1])[0]))
             except ValueError:
                 print("This does not appear to be a TD-DFT file.\nDouble check selection")
         
